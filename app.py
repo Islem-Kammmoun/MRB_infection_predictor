@@ -1,5 +1,5 @@
 # app.py
-from flask import Flask, render_template,request,redirect,url_for,Response
+from flask import Flask, render_template,request,url_for,Response
 import joblib
 import pandas as pd
 import sqlite3
@@ -21,27 +21,27 @@ c = conn.cursor()
 c.execute("""CREATE TABLE IF NOT EXISTS patient01  (
     Durée infection float,
     S_à_entrée float,
-    Age float,
-    Cathéters centrau float,
-    HTA float,
-    OFLO float,
-    CIPRO float,
-    Qsofa float,
-    DT2 float,
-    LEVOFLO float
+    Age ,
+    Cathéters centrau int,
+    HTA int,
+    OFLO int,
+    CIPRO int,
+    Qsofa int,
+    DT2 int,
+    LEVOFLO int
 )""")
 
 c.execute("""CREATE TABLE IF NOT EXISTS patientBMR  (
     Durée infection float,
     Age float,
     S_à_entrée float,
-    Qsofa float,
-    Cathéters_centrau float,
-    Cathéters_artériels float,
-    DYSLIPEDIIE float,
-    AINOSIDE float,
-    HTA float,
-    AZITHRO float
+    Qsofa int,
+    Cathéters_centrau int,
+    Cathéters_artériels int,
+    DYSLIPEDIIE int,
+    AINOSIDE int,
+    HTA int,
+    AZITHRO int
 )""")
 
 # Enregistrer les changements et fermer la connexion
@@ -59,7 +59,7 @@ def afficher():
     c = conn.cursor()
     patients = c.execute("SELECT * FROM patient01").fetchall()
     conn.close()
-    return render_template('accueil.html', patients=patients)
+    return render_template('affiche.html', patients=patients)
 
 @app.route('/export_patient')
 def export_patient():
@@ -92,31 +92,7 @@ def afficher_BMR():
     c = conn.cursor()
     patients = c.execute("SELECT * FROM patientBMR").fetchall()
     conn.close()
-    return render_template('accueil_BMR.html', patients=patients)
-
-@app.route('/export_patientBMR')
-def export_patientBMR():
-    conn = sqlite3.connect('base_de_données_BMR.db')
-    c = conn.cursor()
-    c.execute("SELECT * FROM patientBMR")
-
-    # Write data to CSV file
-    with open('patientBMR.csv', 'w', newline='') as csvfile:
-        csvwriter = csv.writer(csvfile)
-        csvwriter.writerow([i[0] for i in c.description]) # write headers
-        csvwriter.writerows(c)
-
-    conn.close()
-
-    # Return CSV file as a response
-    with open('patientBMR.csv', 'r') as f:
-        csv_data = f.read()
-
-    return Response(
-        csv_data,
-        mimetype="text/csv",
-        headers={"Content-disposition":
-                 "attachment; filename=patientBMR.csv"})
+    return render_template('affiche_BMR.html', patients=patients)
    
 
 @app.route('/form01')
@@ -135,7 +111,7 @@ def predict_01():
             input_data[k] = float(v)
         except ValueError:
             # Handle the case where the input field is empty or not a valid number
-            input_data[k] = 0.0
+            input_data[k] = 0
 
     conn = sqlite3.connect('base_de_données_BMR.db')
     c = conn.cursor()
@@ -143,8 +119,6 @@ def predict_01():
                tuple(input_data[k] for k in input_data.keys()))
     conn.commit()
     conn.close()
-    # return redirect(url_for('afficher'))
-    
 
     # Debugging statements
     print(request.form)
@@ -179,7 +153,7 @@ def predict_BMR():
             input_data[k] = float(v)
         except ValueError:
             # Handle the case where the input field is empty or not a valid number
-            input_data[k] = 0.0
+            input_data[k] = 0
 
     conn = sqlite3.connect('base_de_données_BMR.db')
     c = conn.cursor()
@@ -198,7 +172,6 @@ def predict_BMR():
     if result[0]== 0:
         return render_template('result.html', prediction="À 88%, le patient ne sera pas infecté")
         
-
 
     #--------------------------coding the result ---------------------
     d={}
@@ -267,6 +240,30 @@ def predict_BMR():
 
     # Return the prediction result to the user
     return render_template('result.html', prediction="À 88%, le patient sera infecté par : {}".format(result))
+
+@app.route('/export_patientBMR')
+def export_patientBMR():
+    conn = sqlite3.connect('base_de_données_BMR.db')
+    c = conn.cursor()
+    c.execute("SELECT * FROM patientBMR")
+
+    # Write data to CSV file
+    with open('patientBMR.csv', 'w', newline='') as csvfile:
+        csvwriter = csv.writer(csvfile)
+        csvwriter.writerow([i[0] for i in c.description]) # write headers
+        csvwriter.writerows(c)
+
+    conn.close()
+
+    # Return CSV file as a response
+    with open('patientBMR.csv', 'r') as f:
+        csv_data = f.read()
+
+    return Response(
+        csv_data,
+        mimetype="text/csv",
+        headers={"Content-disposition":
+                 "attachment; filename=patientBMR.csv"})
 
 if __name__ == '__main__':
     app.run(debug=True)
